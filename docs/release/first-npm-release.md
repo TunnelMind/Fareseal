@@ -93,3 +93,115 @@ Only `packages/cloudflare` has a `CHANGELOG.md`; the other four public packages 
 - hono 2.3.0: `X402VerifyResult.retryAfterS?`; held 402 carries `retry-after`; `settle-unconfirmed` and `no-transaction-id` 402s are error-only; `hono` peer floor `^4.13.16` (GHSA-h7mg-cq63-vhpq).
 - maze 2.3.0: version only, no source change since 2.2.0 (one-version rule).
 - adapter-x402 2.3.0: `MAX_X_PAYMENT_CHARS = 8192`; a longer `X-PAYMENT` header is refused as `malformed`.
+
+## Owner: first publish by hand
+
+Written 2026-11-15. Owner only (ADR 005: "No agent publishes. The owner publishes."). The agent never logs in to npm, never reads a token, never pushes the tag.
+
+**Why by hand.** npm configures a trusted publisher on an *existing* package's settings page, and none of the five packages exists yet (an `npm view` on 2026-11-15 gave a 404; runbook `deploy-runbook-2026-11-13.md`, Step 7, blocker 1). So the tag workflow cannot do the first publish. This procedure is the manual first publish; after it, trusted publishing takes over. Unverified: that npm still has no way to pre-register a trusted publisher for a package that does not exist (docs.npmjs.com/trusted-publishers, not read in this task); check that page before step 3 and, if pre-registration exists, tell the coordinator — this procedure would change.
+
+`<tag>` below is `v2.3.0` unless the owner answered Q1 differently. The tag does not exist until step 7. Step 1 clones the **bump commit** (the commit whose seven `packages/*/package.json` carry that version; with the 2.3.0 default, the commit that merged this branch to `main`). Do not tag before step 6.
+
+Every `npm`/`pnpm` claim below cites its source or says "unverified". Sources: docs.npmjs.com and pnpm.io, **not read in this task (no web access); every citation is the page to read, dated 2026-11-15 as "to check", not "read"**. Claims taken from this repo (`scripts/release-check.mjs`, `.github/workflows/publish.yml`) or the runbook are marked as such.
+
+### Step 1 — Fresh clone at the bump commit
+
+```sh
+git clone https://github.com/TunnelMind/tollbooth.git ~/fareseal-publish && cd ~/fareseal-publish
+git checkout --detach <bump-commit-sha>   # the reviewed commit, not whatever main is today
+git log -1 --format='%H %s'
+```
+
+Check: `git status --short` and `git rev-parse HEAD`.
+Expected: `git status --short` prints nothing; `git rev-parse HEAD` equals `<bump-commit-sha>` exactly (a bare clone gives main's current HEAD, which may be newer than what was reviewed). A fresh clone matters because `pnpm publish` ships whatever is in the working tree's `dist/`; a stale local build would publish it.
+
+### Step 2 — Install, build, test, release-check
+
+```sh
+pnpm install --frozen-lockfile && pnpm build && pnpm test && node scripts/release-check.mjs --tag v2.3.0
+```
+
+Check: the command exits 0 (`echo $?` prints `0`), and the release-check line.
+Expected: install, build and tests pass; `node scripts/release-check.mjs --tag v2.3.0` exits 0 and prints `release-check: ok (2.3.0)` (`scripts/release-check.mjs` header: all packages share one version and the public set is exactly the five of ADR 005). Known flake: some `packages/cloudflare/test` tests can time out at 5000 ms under load (seen at `pages-settle.test.ts:1112` on 2026-11-15; passes alone). Re-run `pnpm test` once; if the same test still fails, stop and ask. The command uses the tag form, so it exits non-zero if any package version differs from the tag (script header); use your Q1 version in place of `v2.3.0`. Also run `node scripts/release-check.mjs` without `--tag` once: it exits 0 and prints `release-check: ok (no tag)`.
+
+### Step 3 — npm web login (owner's own account)
+
+```sh
+npm login --auth-type=web
+```
+
+Run it in tmux with `BROWSER=true` if no browser opens on the host (runbook Step 7, blocker 1, citing the gotchas file); open the printed URL yourself and approve with your passkey. Source: docs.npmjs.com/cli/commands/npm-login (to check 2026-11-15; `--auth-type=web` unverified against the page).
+
+Check: `npm whoami`.
+Expected: prints your npm username, the account that owns the `@tunnelmindai` scope (ADR 005). If it errors with `ENEEDAUTH`, the login did not complete. Also run `npm --version`; the tag workflow pins npm 11.6.1, trusted publishing needs ≥ 11.5.1 (`publish.yml` header, citing docs.npmjs.com/trusted-publishers read 2026-09-17), but a manual publish needs no particular npm version (unverified).
+
+### Step 4 — Publish from the repo root
+
+```sh
+pnpm -r publish --access public --no-git-checks
+```
+
+Run this **from the repository root**, and never `npm publish` inside a package directory. Why: the packages depend on each other as `workspace:*`; `pnpm publish` rewrites those to real versions in the tarball, plain `npm publish` does not and would ship `workspace:*`, which no installer can resolve (runbook Step 7; pnpm.io/cli/publish and pnpm.io/workspaces, to check 2026-11-15, unverified). The release-check run in Step 2 covers the root-level pnpm publish; a per-package `npm publish` bypasses that procedure and also skips the `workspace:*` rewrite. `-r` skips the two `"private": true` packages, `cli` and `adapter-stripe` (`publish.yml` header; pnpm.io/cli/recursive, unverified). `--no-git-checks` is there because the workflow uses it and the clone may not be on a named branch (pnpm.io/cli/publish, unverified). `--access public` is needed for a scoped package's first publish (docs.npmjs.com/creating-and-publishing-scoped-public-packages, unverified). npm may ask for a web approval per package.
+
+Check: for each package, `npm view --prefer-online @tunnelmindai/fareseal-<core|hono|maze|adapter-x402|cloudflare> version`.
+Expected: five lines, each `2.3.0` (the packument can lag about 2 minutes, runbook Step 7; wait and re-run before suspecting a failure). If fewer than five, go to step 8.
+
+### Step 5 — Trusted publisher on each of the five packages
+
+For each of `@tunnelmindai/fareseal-core`, `-hono`, `-maze`, `-adapter-x402`, `-cloudflare` (ADR 005, `scripts/release-check.mjs` `PUBLIC`): open its page on npmjs.com, Settings, Trusted Publisher, choose GitHub Actions, and enter repository owner `TunnelMind`, repository `tollbooth`, workflow filename `publish.yml` (the filename must match exactly; `publish.yml` header, docs.npmjs.com/trusted-publishers read 2026-09-17). Leave the environment field empty (`publish.yml` has no `environment:`). The repo slug is still `tollbooth` although the product is Fareseal; it must be the slug GitHub uses.
+
+Check: re-open each package's Settings page.
+Expected: five pages, each showing a GitHub Actions publisher `TunnelMind/tollbooth` with `publish.yml`. This binding is what lets the tag workflow publish without a token; no token is created or stored anywhere (`publish.yml` header).
+
+### Step 6 — Post-publish checks (runbook Step 7)
+
+```sh
+for p in core hono maze adapter-x402 cloudflare; do printf '%s ' $p; curl -s https://registry.npmjs.org/@tunnelmindai/fareseal-$p | jq -r '."dist-tags".latest, (.versions["2.3.0"].dist.attestations.provenance.predicateType // "NO-PROVENANCE")' | tr '\n' ' '; echo; done
+curl -s https://registry.npmjs.org/@tunnelmindai/fareseal-cloudflare | jq -c '.versions["2.3.0"].dependencies'
+( cd "$(mktemp -d)" && npm init -y >/dev/null && npm install @tunnelmindai/fareseal-cloudflare@2.3.0 >/dev/null && node -e "import('@tunnelmindai/fareseal-cloudflare').then(m=>console.log(typeof m.createPagesMiddleware))" )
+```
+
+Check A, dist-tags: the first command's first value per line.
+Expected: `2.3.0` for all five (`latest`; a first publish sets `latest` by default, docs.npmjs.com/cli/commands/npm-dist-tag, unverified).
+
+Check B, provenance: the second value per line.
+Expected for a **manual first version: `NO-PROVENANCE` for all five.** The runbook expects a slsa provenance type, but that is for a tag-workflow publish: provenance comes from the GitHub Actions OIDC identity (`publish.yml` header, docs.npmjs.com/trusted-publishers read 2026-09-17), and a publish from the owner's machine has none (docs.npmjs.com/generating-provenance-statements, unverified). So 2.3.0 ships without it and will never get it, since a version cannot be republished. Provenance starts with the first version the tag workflow publishes (2.3.1 or later). If provenance on 2.3.0 matters, stop before step 4 and ask; the only way is to publish from the workflow, which cannot run until the packages exist, so this is a real trade, not an oversight.
+
+Check C, no `workspace:*`: `npm view @tunnelmindai/fareseal-cloudflare@2.3.0 dependencies --json`, and the same for `-hono` (depends on core). Only cloudflare (four workspace dependencies) and hono have fareseal runtime dependencies; maze and adapter-x402 have none, so they cannot carry `workspace:*` between packages. The second command above gives the same for cloudflare.
+Expected: real versions for the fareseal dependencies (`"2.3.0"`), and the output contains no `workspace:`. A `workspace:` hit means someone ran `npm publish` in a package dir: go to step 9.
+
+Check D, install smoke test: the third command.
+Expected: prints `function`. Anything else (an `undefined`, an install error) means the published tarball is broken: go to step 9.
+
+### Step 7 — Tag push, and what the tag run does
+
+```sh
+git tag v2.3.0 && git push origin v2.3.0
+```
+
+Do this after steps 4 to 6 pass, from the step 1 clone (HEAD is the bump commit). The tag must be the plain `vX.Y.Z` form; `rc` tags never trigger the workflow (`publish.yml` `on.push.tags`).
+
+Check: `gh run list -R TunnelMind/tollbooth --workflow publish.yml -L 1`, then `gh run watch` on it.
+Expected: the run starts on the tag. It installs, builds, tests, checks the tag equals every `packages/*/package.json` version (inline today in `publish.yml`; the release-check script once T004 lands), requests an OIDC token, and runs `pnpm -r publish --access public --no-git-checks`. Because 2.3.0 is already on npm from step 4, this publish has nothing new to publish. What happens then is **unverified**: runbook Step 7 says `pnpm -r publish` skips versions already on the registry (pnpm.io/cli/publish, to check), but the runbook itself notes "that behaviour was not tested here". Two outcomes: (a) the step succeeds having skipped all five, fine; (b) the publish step fails with an already-published error (`E403`/"cannot publish over the previously published versions"). In (b), nothing is wrong with the packages: the manual publish already did the job. Do **not** bump the version to make the run green and do not delete the tag expecting it to unpublish anything. Note the failed run in the owner's log, and let the next release (2.3.1) be the first publish through the workflow; it also proves the trusted publisher from step 5. A failure at the OIDC step instead means step 5 is wrong (workflow filename, repo, or owner); fix the settings page, then re-run the workflow with `gh run rerun`.
+
+### Step 8 — Partial publish (stopped after N of 5)
+
+Symptom: step 4 printed an error, or step 4's check showed fewer than five `2.3.0` lines (for example an expired web approval, a network drop, or a failed package).
+
+State: the packages that landed are final; they cannot be republished or re-versioned (step 9). The rest do not exist at 2.3.0. Packages publish in dependency order (pnpm.io/cli/recursive, unverified), so the ones that landed are the ones others depend on, and the missing ones may depend on a landed one: that is fine (`workspace:*` is rewritten to `2.3.0`, which exists).
+
+Recovery: find which names have no 2.3.0 (`npm view --prefer-online <name> version`, a 404 or an older version means missing), fix the cause, then publish the rest **at the same version**. Re-running `pnpm -r publish --access public --no-git-checks` from the repo root should skip the ones already published and publish the rest (runbook Step 7; pnpm behaviour **unverified**); if it errors on the existing ones, run `pnpm --filter <package-name> publish --access public --no-git-checks` from the repo root for each missing package (pnpm.io/filtering, unverified). **Never bump the version to "fix" a partial**: the repo carries one version for all seven manifests (`publish.yml` tag check), so a bump moves all packages and leaves a gap, two numbering schemes, and an orphan 2.3.0 on the ones that landed. Then continue at step 5 with the full five.
+
+Check: `for p in core hono maze adapter-x402 cloudflare; do npm view --prefer-online @tunnelmindai/fareseal-$p version; done`.
+Expected: after recovery, five lines of `2.3.0`; then continue at step 5. Before recovery, the missing names print an E404 or an older version.
+
+### Step 9 — Irreversibility
+
+- A published `name@version` can never be re-used, even after unpublish: 2.3.0 is spent for each of the five names the moment it lands (runbook Step 7; docs.npmjs.com/policies/unpublish, to check 2026-11-15).
+- `npm unpublish` is allowed only within 72 hours of publish, and only while nothing depends on the package; after that, `npm deprecate` is the only tool, and an unpublished name is blocked for 24 hours (runbook Step 7; docs.npmjs.com/policies/unpublish, unverified; the 72h and 24h figures come from the runbook, not from the npm page).
+- Within the window, a bad version: `npm unpublish @tunnelmindai/fareseal-<x>@2.3.0` per package; the version number is still burned, so the fix ships as 2.3.1 for all five (never a partial bump).
+- Deleting the git tag unpublishes nothing.
+- The five names become the public identity of the product and the package `repository.url` must stay resolvable (`github.com/TunnelMind/tollbooth`), or provenance on later versions breaks (runbook Step 7).
+
+Check: `npm view @tunnelmindai/fareseal-core time --json` (repeat per package).
+Expected: a `"2.3.0"` key with the publish timestamp. Less than 72 hours ago: `npm unpublish` is still possible if nothing depends on the package; later: only `npm deprecate` applies (runbook Step 7; docs.npmjs.com/policies/unpublish, unverified; the `time` field of `npm view` is unverified too).
