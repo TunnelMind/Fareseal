@@ -205,3 +205,31 @@ Expected: after recovery, five lines of `2.3.0`; then continue at step 5. Before
 
 Check: `npm view @tunnelmindai/fareseal-core time --json` (repeat per package).
 Expected: a `"2.3.0"` key with the publish timestamp. Less than 72 hours ago: `npm unpublish` is still possible if nothing depends on the package; later: only `npm deprecate` applies (runbook Step 7; docs.npmjs.com/policies/unpublish, unverified; the `time` field of `npm view` is unverified too).
+
+## Why the v2.0.0-rc.1 tag run failed
+
+Run 35177528704 (push of tag `v2.0.0-rc.1`, 2026-09-17) failed at the step "The tag must equal every package version (one repo-wide version)". `gh run view 35177528704 --log-failed` now prints nothing (the log has expired); the same run's annotation, read with `gh run view 35177528704 --job 105062405685`, still carries the line:
+
+```
+X packages/adapter-stripe/package.json is 2.0.0, tag is 2.0.0-rc.1
+```
+
+The dispatch dry run beside it (run 35177528100, same tag, `workflow_dispatch`) went green because the tag check was `if: github.event_name == 'push'` and so was skipped. A dry run therefore did not rehearse the check that stopped the real run.
+
+**Fix.** `.github/workflows/publish.yml:53-55` runs `node scripts/release-check.mjs --tag "$GITHUB_REF_NAME"` under `if: startsWith(github.ref, 'refs/tags/')` (dispatch on a tag included); `:56-59` packs and runs `--packed` in every mode; `:68-69` is the single publish step, `--dry-run` appended only for `workflow_dispatch` with `inputs.dry_run`. `.github/workflows/ci.yml:31` adds the `publish-dry-run` job (`contents: read`, no secrets, no `id-token`) so every PR runs the same steps.
+
+### Local run of the `publish-dry-run` commands (`NPM_CONFIG_USERCONFIG=/dev/null`, 2026-11-15)
+
+- `node scripts/release-check.mjs` → `release-check: ok (no tag)`, exit 0.
+- `pnpm -r pack --pack-destination <dir>` then `node scripts/release-check.mjs --packed <dir>` → `release-check: packed manifests clean`, exit 0. `pack` also writes the private `cli` and `adapter-stripe` tarballs (all seven, `…-2.3.0.tgz`); the check passes on all seven, and publish skips the private two.
+- `pnpm -r publish --access public --no-git-checks --dry-run` → exit 0, exactly five packages, one version (the `📦` lines; `adapter-stripe`, `cli`, `examples`, `bench` do not appear):
+
+```
+📦 @tunnelmindai/fareseal-adapter-x402@2.3.0 → https://registry.npmjs.org/
+📦 @tunnelmindai/fareseal-cloudflare@2.3.0 → https://registry.npmjs.org/
+📦 @tunnelmindai/fareseal-core@2.3.0 → https://registry.npmjs.org/
+📦 @tunnelmindai/fareseal-hono@2.3.0 → https://registry.npmjs.org/
+📦 @tunnelmindai/fareseal-maze@2.3.0 → https://registry.npmjs.org/
+```
+
+- CHANGELOG in the tarball: no. The cloudflare tarball holds `dist/`, `LICENSE`, `package.json`, `README.md` only; `tar -tzf` on all seven tarballs finds no `CHANGELOG`.

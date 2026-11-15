@@ -11,6 +11,12 @@
 #
 # Dry run: `gh workflow run publish.yml --ref <tag> -f dry_run=true` performs the OIDC token
 # request (and prints the decoded claims — never the token) and runs `pnpm publish --dry-run`.
+#
+# One path for every mode: run 35177528704 (v2.0.0-rc.1) failed the inline tag check, but the
+# dispatch dry run (35177528100) had skipped that check (it was `if: push` only) and went green.
+# The rules now live in scripts/release-check.mjs; the tag check runs whenever the ref is a tag,
+# the packed-tarball check runs in every mode, and the only dry-run/real difference is the
+# `--dry-run` flag on the single publish step.
 name: publish
 
 on:
@@ -45,13 +51,12 @@ jobs:
       - run: pnpm test
 
       - name: The tag must equal every package version (one repo-wide version)
-        if: github.event_name == 'push'
+        if: startsWith(github.ref, 'refs/tags/')
+        run: node scripts/release-check.mjs --tag "$GITHUB_REF_NAME"
+      - name: Pack, then check the tarballs (no workspace:* ranges)
         run: |
-          tag="${GITHUB_REF_NAME#v}"
-          for f in packages/*/package.json; do
-            v=$(node -p "require('./$f').version")
-            [ "$v" = "$tag" ] || { echo "::error::$f is $v, tag is $tag"; exit 1; }
-          done
+          pnpm -r pack --pack-destination "$RUNNER_TEMP/packed"
+          node scripts/release-check.mjs --packed "$RUNNER_TEMP/packed"
 
       - name: OIDC token claims (proof of the exchange; the token itself is never printed)
         id: oidc
@@ -60,9 +65,5 @@ jobs:
           echo "::add-mask::$tok"
           echo "$tok" | cut -d. -f2 | tr '_-' '/+' | awk '{ l=length($0)%4; if (l) $0=$0 substr("===",1,4-l); print }' | base64 -d | jq '{iss, aud, sub, repository, ref, workflow_ref, job_workflow_ref, runner_environment}'
 
-      - name: Publish (dry run)
-        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
-        run: pnpm -r publish --access public --no-git-checks --dry-run
       - name: Publish
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)
-        run: pnpm -r publish --access public --no-git-checks
+        run: pnpm -r publish --access public --no-git-checks ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '--dry-run' || '' }}
