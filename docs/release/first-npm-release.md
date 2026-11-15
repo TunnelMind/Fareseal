@@ -45,7 +45,7 @@ Already in 2.2.0, so NOT a change: an unknown `[toll.x402] network` throwing `Co
 | 2.4.0 | no | Needs a seven-file bump and a CHANGELOG heading rename; buys nothing, since 2.3.0 was never on npm. Cost: one extra commit and a gap in numbering that readers will ask about. |
 | 3.0.0 | no | Honest only if the error-only 402 (A11), the hono floor raise, or the dropped 4th-concurrent payment (A1, a known cost) are called breaking. Cost: seven-file bump, CHANGELOG rename, and the `config.ts:134-135` promise comes due (the tollbooth well-known fallback is meant to go "until 3.0.0"), so either remove it in this release (a `packages/core/src` change this PR is not allowed to make) or break the stated promise. |
 
-Default if silence: **2.3.0**; the CHANGELOG heading then becomes `## 2.3.0` with a date, dropping "— Unreleased" (the form the default implies; T-task for the CHANGELOG owns that edit, not this one).
+Default if silence: **2.3.0**; the CHANGELOG heading becomes `## 2.3.0 — first npm release (date set by the bump commit)`, dropping "Unreleased" (see "CHANGELOG proposal" below; the date is not invented, the owner's release commit writes it).
 
 ### Prepared bump commit
 
@@ -74,3 +74,22 @@ Command: `pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm 
 - install, lint, typecheck: passed.
 - `pnpm test`: 834 passed, 1 failed (60 files, 1 failed). The one failure: `packages/cloudflare/test/pages-settle.test.ts:1112` "R012 M2: the unconfirmed map is capped at UNCONFIRMED_CAP, oldest out" — `Test timed out in 5000ms`. It passed alone on this tree (`vitest run … -t 'unconfirmed map is capped'`, 1 passed, 3.2 s), so it is a load timeout, not a logic failure. No other test timed out in this run: `settle-budget.test.ts:265` ("100 sequential → 3") and the settle-budget OQ1 test passed this time. Whether the 5000 ms timeouts (these and others) also fail on clean `e085f5d` is for QA's baseline; I did not run clean `e085f5d` myself. No test or timeout was edited.
 - `pnpm test` exits non-zero, so the `&&` chain stopped; I ran the last two separately: `bun examples/bun-hono/check.ts` and `bench.ts --check` (NFR-1 PASS, added p50 0.000 ms, p99 0.012 ms) both exit 0.
+
+## CHANGELOG proposal
+
+Only `packages/cloudflare` has a `CHANGELOG.md`; the other four public packages have none (`ls packages/*/CHANGELOG.md`).
+
+**Heading chosen (default 2.3.0, Q1).** `packages/cloudflare/CHANGELOG.md:5` was `## 2.3.0 — Unreleased`; it is now `## 2.3.0 — first npm release (date set by the bump commit)`. Why: "Unreleased" is false once the owner publishes and would ship stale; the publish date is unknown until the owner publishes (ADR 005), so none is invented; the placeholder says who fills it in. The bullets under it (A1–A14, L6, T1 rows) are byte-identical to main; only line 5 changed.
+
+**What each other Q1 answer changes** (one line each):
+- 2.3.0 (default): heading as above; no `package.json` change.
+- 2.4.0: heading becomes `## 2.4.0 — first npm release (date set by the bump commit)`, and the bullet line 7 ("2.3.0 marks this payment-path refresh") then needs the owner's wording; seven manifests move.
+- 3.0.0: same heading rename to `## 3.0.0 — first npm release (…)`, plus a "Breaking" bullet for A11 / hono floor / A1 and the `config.ts:134-135` fallback decision; seven manifests move.
+
+**Pre-existing, not touched.** `packages/cloudflare/CHANGELOG.md:78` `## 2.1.0 — Unreleased` is a stale heading from before 2.2.0/2.0.1; this task leaves it alone (`grep -n Unreleased` prints only that line).
+
+**Proposed entries for the other public packages.** None needed as files: core, hono, maze and adapter-x402 ship no CHANGELOG and none is in their `files`, so a new file would be unpublished clutter and the "Per package" section above already records their changes for release notes. If the owner wants GitHub release notes, use these lines:
+- core 2.3.0: new exports `isOperatorFault`, `isNoOfferFault`; held repeats capped at 60 per window per verified agent key; no-offer faults record no offer.
+- hono 2.3.0: `X402VerifyResult.retryAfterS?`; held 402 carries `retry-after`; `settle-unconfirmed` and `no-transaction-id` 402s are error-only; `hono` peer floor `^4.13.16` (GHSA-h7mg-cq63-vhpq).
+- maze 2.3.0: version only, no source change since 2.2.0 (one-version rule).
+- adapter-x402 2.3.0: `MAX_X_PAYMENT_CHARS = 8192`; a longer `X-PAYMENT` header is refused as `malformed`.

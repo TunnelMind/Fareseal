@@ -2,7 +2,7 @@
 
 Tollbooth was renamed Fareseal on 2026-11-10.
 
-## 2.3.0 — Unreleased
+## 2.3.0 — first npm release (date set by the bump commit)
 
 - The site vendored 514bb79 as 2.2.0; 2.3.0 marks this payment-path refresh.
 - A1: a fresh payment from a payer whose live failures plus settles in flight already total 3, with fewer than 3 live failures (e.g. a 4th concurrent payment), was settled; it now gets the 402 `payer cooling down after repeated failures; retry later` (`payer-cooldown`, byte-identical to the existing one): no settle call, not cached, not counted, offer recorded. Known cost: an honest payer's 4th concurrent payment is refused with that text (README, "Known costs").
