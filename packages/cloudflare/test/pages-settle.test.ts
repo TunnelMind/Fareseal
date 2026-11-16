@@ -127,7 +127,7 @@ function settlingMw(price = "0.001") {
   });
 }
 const envOf = (b: { fetch: (req: Request) => Promise<Response> }) => ({
-  TOLLBOOTH_SETTLE_TOKEN: "settle-secret",
+  FARESEAL_SETTLE_TOKEN: "settle-secret",
   DATA_API: b,
 });
 
@@ -3232,7 +3232,7 @@ describe("per-payer in-flight settles are reserved (spec 006 T004, R-O1)", () =>
       // An undecodable site key makes the build reject. The cache key only
       // records that a site key is set, so the repaired env has the same key
       // and would be handed a cached rejection if one were kept.
-      const bad = { ...envOf(b), TOLLBOOTH_SITE_KEY: "!!!" };
+      const bad = { ...envOf(b), FARESEAL_SITE_KEY: "!!!" };
       const failed = await Promise.all(
         [1, 2, 3].map(() => mw(ctx("/r", agent(), bad))),
       );
@@ -3241,7 +3241,7 @@ describe("per-payer in-flight settles are reserved (spec 006 T004, R-O1)", () =>
       expect(err).toHaveBeenCalledTimes(3);
       const good = {
         ...envOf(b),
-        TOLLBOOTH_SITE_KEY: toBase64Url(generateSecretKey()),
+        FARESEAL_SITE_KEY: toBase64Url(generateSecretKey()),
       };
       const xp = freshPayment();
       const rs = await Promise.all(
@@ -3259,7 +3259,7 @@ describe("per-payer in-flight settles are reserved (spec 006 T004, R-O1)", () =>
       const b = settleBinding({ settled: true, payer: "0xabc", tx: TX });
       const env = {
         ...envOf(b),
-        TOLLBOOTH_SITE_KEY: toBase64Url(generateSecretKey()),
+        FARESEAL_SITE_KEY: toBase64Url(generateSecretKey()),
       };
       const mw = settlingMw();
       const t0 = Date.now();

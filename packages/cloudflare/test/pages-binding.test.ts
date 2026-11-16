@@ -21,7 +21,7 @@ import {
 import { agent, ctx, human, toml } from "./helpers.js";
 
 const seedEnv = () => ({
-  TOLLBOOTH_SITE_KEY: toBase64Url(generateSecretKey()),
+  FARESEAL_SITE_KEY: toBase64Url(generateSecretKey()),
 });
 
 describe("no global-fetch fallback", () => {
@@ -104,7 +104,7 @@ describe("no global-fetch fallback", () => {
     expect(snap?.legacy).toBe(snap?.env); // old collectors still read x-tollbooth-env
   });
 
-  it("a binding fetch also carries the marker, and TOLLBOOTH_ENV overrides it verbatim", async () => {
+  it("a binding fetch also carries the marker, and FARESEAL_ENV overrides it verbatim", async () => {
     const seen: (string | null)[] = [];
     const seenLegacy: (string | null)[] = [];
     const binding = {
@@ -124,7 +124,7 @@ describe("no global-fetch fallback", () => {
       ctx(
         "/a",
         agent(),
-        { ...seedEnv(), DATA_API: binding, TOLLBOOTH_ENV: "staging" },
+        { ...seedEnv(), DATA_API: binding, FARESEAL_ENV: "staging" },
         (p) => flushed.push(p),
       ),
     );
@@ -133,7 +133,7 @@ describe("no global-fetch fallback", () => {
     expect(seenLegacy).toContain("staging");
   });
 
-  it("the marker is production when no test runner is detectable and TOLLBOOTH_ENV is unset", () => {
+  it("the marker is production when no test runner is detectable and FARESEAL_ENV is unset", () => {
     expect(testRunnerDetected()).toBe(true); // we are under vitest
     const g = globalThis as Record<string, unknown>;
     const savedProcess = g.process;
@@ -143,6 +143,10 @@ describe("no global-fetch fallback", () => {
       g.__vitest_worker__ = undefined;
       expect(testRunnerDetected()).toBe(false);
       expect(faresealEnvMarker({})).toBe("production");
+      expect(faresealEnvMarker({ FARESEAL_ENV: "production" })).toBe(
+        "production",
+      );
+      // Legacy name, read as a fallback until 3.0.0.
       expect(faresealEnvMarker({ TOLLBOOTH_ENV: "production" })).toBe(
         "production",
       );
@@ -240,7 +244,7 @@ describe("a service binding is called with itself as `this`", () => {
         agent({ "x-payment": freshPayment() }),
         {
           ...seedEnv(),
-          TOLLBOOTH_SETTLE_TOKEN: "settle-secret",
+          FARESEAL_SETTLE_TOKEN: "settle-secret",
           DATA_API: b,
         },
         (p) => pending.push(p),
@@ -259,7 +263,7 @@ describe("a service binding is called with itself as `this`", () => {
     });
     const r = await mw(
       ctx("/research", agent({ "x-payment": freshPayment() }), {
-        TOLLBOOTH_SETTLE_TOKEN: "settle-secret",
+        FARESEAL_SETTLE_TOKEN: "settle-secret",
         DATA_API: b,
       }),
     );
