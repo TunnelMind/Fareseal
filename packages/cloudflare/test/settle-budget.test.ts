@@ -200,7 +200,7 @@ async function pages() {
     settle: { url: SETTLE_URL },
     binding: "DATA_API",
   });
-  const env = { TOLLBOOTH_SETTLE_TOKEN: "settle-secret", DATA_API: w };
+  const env = { FARESEAL_SETTLE_TOKEN: "settle-secret", DATA_API: w };
   // Warm the isolate state first (a cold burst is covered by the R004 tests).
   await mw(ctx("/r", agent(), env));
   const send = async (xp: string) => {

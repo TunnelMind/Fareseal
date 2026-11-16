@@ -44,8 +44,8 @@ function freshPayment(): string {
 
 // A paid pass emits PASS_PAID (an unsigned agent's offer emits nothing).
 const env = () => ({
-  TOLLBOOTH_SITE_KEY: toBase64Url(generateSecretKey()),
-  TOLLBOOTH_SETTLE_TOKEN: "settle-secret",
+  FARESEAL_SITE_KEY: toBase64Url(generateSecretKey()),
+  FARESEAL_SETTLE_TOKEN: "settle-secret",
 });
 
 async function report(mw: ReturnType<typeof createPagesMiddleware>, e: object) {

@@ -76,7 +76,7 @@ const settlingMw = (extra: { corpus?: { seed: string; pages: number } } = {}) =>
     ...extra,
   });
 const envOf = (b: { fetch: (req: Request) => Promise<Response> }) => ({
-  TOLLBOOTH_SETTLE_TOKEN: "settle-secret",
+  FARESEAL_SETTLE_TOKEN: "settle-secret",
   DATA_API: b,
 });
 

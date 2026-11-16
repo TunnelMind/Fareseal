@@ -101,7 +101,7 @@ describe("createPagesMiddleware — core behaviors", () => {
     expect(unauthed.headers.get("x-tollbooth-mode")).toBeNull();
   });
 
-  it("snapshots are signed by the site key and sent via the binding", async () => {
+  it("snapshots are signed by the site key (legacy TOLLBOOTH_SITE_KEY name, removed in 3.0.0) and sent via the binding", async () => {
     const seed = generateSecretKey();
     const sitePub = await publicKeyOf(seed);
     const posts: { url: string; body: Record<string, unknown> }[] = [];
