@@ -5,7 +5,7 @@ Tollbooth was renamed Fareseal on 2026-11-10. One row per renamed surface.
 | Surface | Old | New | Old still works? | Removed in |
 | --- | --- | --- | --- | --- |
 | npm package names | `@tunnelmindai/tollbooth-*` | `@tunnelmindai/fareseal-*` | Old names stay published, deprecated; no code alias | never unpublished |
-| Repo slug | `TunnelMind/tollbooth` | `TunnelMind/fareseal` (after N007; until then the slug and the `repository` URLs stay) | GitHub redirects after the rename | n/a |
+| Repo slug | `TunnelMind/tollbooth` | `TunnelMind/Fareseal` (renamed 2026-11-17; `repository`, `homepage` and README links follow) | Yes: GitHub redirects the old web and git URLs | n/a |
 | Env vars (`SITE_KEY`, `SETTLE_TOKEN`, `ENV`, `FLUSH_INTERVAL_MS`, `EXAMPLE_SERVE`, `REPORT_TOKEN`) | `TOLLBOOTH_<X>` | `FARESEAL_<X>` | Yes: `readEnv()` in core reads `FARESEAL_` first, falls back to `TOLLBOOTH_`; a blank new value falls back. `REPORT_TOKEN` is read by the site's own config builder (`env.FARESEAL_REPORT_TOKEN ?? env.TOLLBOOTH_REPORT_TOKEN`) | not scheduled |
 | Config type | `TollboothConfig` | `FaresealConfig` | Yes: `TollboothConfig` stays as a type alias marked `@deprecated` | 3.0.0 |
 | Hono middleware | `tollbooth()`, `TollboothOptions` | `fareseal()`, `FaresealOptions` | Yes: `const`/type aliases marked `@deprecated` (same function) | 3.0.0 |

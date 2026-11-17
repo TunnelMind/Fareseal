@@ -26,8 +26,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TunnelMind/tollbooth.git",
+    "url": "git+https://github.com/TunnelMind/Fareseal.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/TunnelMind/tollbooth#readme"
+  "homepage": "https://github.com/TunnelMind/Fareseal#readme"
 }

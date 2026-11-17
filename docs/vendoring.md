@@ -27,7 +27,7 @@ pnpm version can change the tarball bytes, so record both.
 
 | field | value |
 |---|---|
-| source | https://github.com/TunnelMind/tollbooth |
+| source | https://github.com/TunnelMind/Fareseal |
 | build commit | `<git rev-parse HEAD>` |
 | node / pnpm | `<node --version>` / `<pnpm --version>` |
 | vendored on | `<YYYY-MM-DD>` |

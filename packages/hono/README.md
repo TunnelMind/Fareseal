@@ -27,8 +27,8 @@ settling verifier sets it on a held repeat (`not-yet-valid-held`) only, so
 there the header is on the held 402 and on no other response: not the first
 `authorization not yet valid` 402, not `settle-throttled`, not any other 402.
 
-Part of [Fareseal](https://github.com/TunnelMind/tollbooth) - pay the toll or meet
+Part of [Fareseal](https://github.com/TunnelMind/Fareseal) - pay the toll or meet
 the maze: self-hosted middleware that offers crawlers paid access, passes
 humans untouched, and leaves offline-verifiable conduct receipts. The
-[main README](https://github.com/TunnelMind/tollbooth#readme) has the full
+[main README](https://github.com/TunnelMind/Fareseal#readme) has the full
 story, quickstart and honest limits. MIT.
