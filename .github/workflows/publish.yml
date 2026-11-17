@@ -3,7 +3,8 @@
 # OIDC identity and provenance. cli and adapter-stripe are `"private": true`, so
 # `pnpm -r publish` skips them. No registry token exists anywhere in this
 # repository — the trusted publisher configured on npmjs.com binds this exact workflow file
-# (publish.yml) in TunnelMind/tollbooth to the packages.
+# (publish.yml) in TunnelMind/Fareseal to the packages. The repo was renamed from
+# TunnelMind/tollbooth on 2026-11-17, so the npm trusted publisher must name TunnelMind/Fareseal.
 #
 # Facts this relies on (docs.npmjs.com/trusted-publishers, read 2026-09-17): npm CLI ≥ 11.5.1
 # and Node ≥ 22.14; `permissions: id-token: write`; provenance is generated automatically for

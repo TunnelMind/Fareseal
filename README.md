@@ -44,7 +44,7 @@ have.
 > imports resolve through the workspace.
 
 ```bash
-git clone https://github.com/TunnelMind/tollbooth
+git clone https://github.com/TunnelMind/Fareseal
 cd tollbooth
 pnpm install && pnpm build
 ```

@@ -1,6 +1,6 @@
 # @tunnelmindai/fareseal-cloudflare
 
-Batteries-included [Fareseal](https://github.com/TunnelMind/tollbooth) for
+Batteries-included [Fareseal](https://github.com/TunnelMind/Fareseal) for
 Cloudflare Pages: one import, config in, tolling out. Wires the maze,
 receipt reporting, signed traffic snapshots, and settle-then-serve x402 so
 your `functions/_middleware.js` is nothing but policy.
