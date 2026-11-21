@@ -25,3 +25,31 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - run: bun examples/bun-hono/check.ts
       - run: node --experimental-strip-types bench/bench.ts --check
+
+  # Rehearses the publish job without any credential: same checks, `--dry-run`. A release problem
+  # (version drift, workspace:* in a tarball, wrong package set) shows up here, not on the tag.
+  publish-dry-run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read   # no id-token, no secrets
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22.14"
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+      - name: npm ≥ 11.5.1 (trusted publishing minimum)
+        run: npm install -g npm@11.6.1 && npm --version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test
+      - name: "Release rules (no tag here: one version, exactly the five public packages)"
+        run: node scripts/release-check.mjs
+      - name: Pack, then check the tarballs (no workspace:* ranges)
+        run: |
+          pnpm -r pack --pack-destination "$RUNNER_TEMP/packed"
+          node scripts/release-check.mjs --packed "$RUNNER_TEMP/packed"
+      - name: Publish
+        run: pnpm -r publish --access public --no-git-checks --dry-run
